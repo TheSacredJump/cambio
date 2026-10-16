@@ -21,7 +21,7 @@ type Mode =
   | { k: 'jokerPick'; from: string }
   | { k: 'idle' }
   | { k: 'start' }
-  | { k: 'drawn'; from: 'deck' | 'discard' }
+  | { k: 'drawn'; from: 'deck' | 'discard'; empty: boolean }
   | { k: 'peekOwn' }
   | { k: 'peekOther' }
   | { k: 'viewing'; cardIds: string[] }
@@ -49,7 +49,7 @@ function deriveMode(game: GameView, you: string): Mode {
     case 'start':
       return { k: 'start' };
     case 'drawn':
-      return { k: 'drawn', from: step.from };
+      return { k: 'drawn', from: step.from, empty: !cardsOf(me).length };
     case 'power':
       if (step.stage === 'viewing') return { k: 'viewing', cardIds: step.cardIds };
       switch (step.power) {
@@ -692,6 +692,17 @@ function buildControls(o: { mode: Mode; game: GameView; name: (id: string) => st
       return game.canCambio
         ? { key: 'cambio', buttons: [{ label: 'Cambio', onClick: () => net.act({ t: 'cambio' }), kind: 'cambio' }] }
         : null;
+    case 'drawn':
+      // Nothing to swap with, so keep it or let it go.
+      return mode.empty
+        ? {
+            key: 'keep',
+            buttons: [
+              { label: 'Keep', onClick: () => net.act({ t: 'keep' }), kind: 'primary' },
+              { label: 'Discard', onClick: () => net.act({ t: 'discard' }), kind: 'ghost' },
+            ],
+          }
+        : null;
     case 'give':
       return { key: `give:${mode.to}`, label: `Give ${name(mode.to)} a card`, timer: game.giftMs, buttons: [] };
     case 'jokerPick':
@@ -757,6 +768,7 @@ function playSound(e: GameEvent, you: string, game: GameView) {
       sound.slide(0.12, 0.7);
       break;
     case 'discard':
+    case 'keep':
     case 'give':
     case 'jokerGive':
       sound.slide();

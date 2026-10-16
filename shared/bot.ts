@@ -154,13 +154,14 @@ export class BotBrain {
       const u = this.pick(unknown);
       return swapInto(u?.id ?? worst?.id ?? this.cards(me)[0].id);
     }
+    // An empty hand scores 0 and wins ties on cards, so only a red K is worth keeping.
+    if (!this.cards(me).length) return v < 0 ? { t: 'keep' } : { t: 'discard' };
     // Jokers and Aces/Twos are worth keeping, but their powers are too much fun to always hoard.
     if (face.rank === 'JK' && Math.random() < 0.45) return { t: 'discard' };
     if ((face.rank === 'A' || face.rank === '2') && Math.random() < 0.2) return { t: 'discard' };
     if (worst && worst.value >= v + 3) return swapInto(worst.id);
     if (v <= 3 && unknown.length) return swapInto(this.pick(unknown)!.id);
     if (v <= 2 && worst && worst.value > v) return swapInto(worst.id);
-    if (!this.cards(me).length) return { t: 'discard' };
     if (!powerOf(face) && worst && worst.value > v) return swapInto(worst.id);
     return { t: 'discard' };
   }

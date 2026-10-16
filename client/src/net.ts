@@ -20,6 +20,7 @@ const MOVING: GameEvent['type'][] = [
   'draw',
   'swap',
   'discard',
+  'keep',
   'flip',
   'give',
   'penalty',
