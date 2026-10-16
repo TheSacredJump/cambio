@@ -48,6 +48,8 @@ export interface RoundResults {
   points: Record<string, number>;
   caller: string | null;
   winners: string[];
+  /** How a tie on points was settled: fewer cards, or against the Cambio caller. */
+  tiebreak: 'cards' | 'caller' | null;
   /** Players knocked out for holding seven cards. */
   out: string[];
   reason: 'cambio' | 'deck' | 'out';
@@ -88,6 +90,7 @@ export type GameEvent =
   | { type: 'draw'; playerId: string; from: 'deck' | 'discard' }
   | { type: 'swap'; playerId: string; face: Face }
   | { type: 'discard'; playerId: string; face: Face }
+  | { type: 'keep'; playerId: string }
   | { type: 'power'; playerId: string; power: PowerKind }
   | { type: 'pass'; playerId: string; power: PowerKind }
   | { type: 'peek'; playerId: string; ownerId: string }
@@ -122,6 +125,8 @@ export type Action =
   | { t: 'cambio' }
   | { t: 'swap'; cardId: string }
   | { t: 'discard' }
+  /** Only with an empty hand: keep the drawn card. */
+  | { t: 'keep' }
   | { t: 'peek'; cardId: string }
   | { t: 'pickTwo'; a: string; b: string }
   | { t: 'decide'; swap: boolean }

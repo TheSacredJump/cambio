@@ -98,7 +98,8 @@ export function RulesSheet({ onClose, limit }: { onClose: () => void; limit: num
         <p>
           Draw from the deck, or take the top discard and swap it into your hand. A card you draw can be swapped for one of yours
           (the old one goes to the discard) or thrown straight onto the discard. Only a card drawn from the deck and discarded
-          straight away uses its power. Every power is optional except the Joker.
+          straight away uses its power. Every power is optional except the Joker. If your hand is empty, you can keep the card you
+          draw instead. When the deck runs out, the top discard stays put and the rest are shuffled into a new deck.
         </p>
 
         <h3>Flipping</h3>
@@ -125,7 +126,9 @@ export function RulesSheet({ onClose, limit }: { onClose: () => void; limit: num
         <h3>Scoring</h3>
         <p>
           A = 1, number cards at face value, J = 11, Q = 12, black K = 13, Joker = 0, red K = −1. The round’s lowest hand scores nothing;
-          everyone else adds their total. The match ends when someone reaches 100, and the lowest total wins.
+          everyone else adds their total. A tie on points goes to whoever holds fewer cards. If the cards are level too, it’s a shared
+          win, unless one of you called Cambio: the caller loses the tie. The match ends when someone reaches 100, and the lowest
+          total wins.
         </p>
       </motion.div>
     </motion.div>

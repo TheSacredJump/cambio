@@ -176,6 +176,11 @@ export class Game {
     if (p.out && a.t !== 'select') throw new GameError('You’re out of this round with seven cards.');
     // Doing anything else lets an unused gift lapse.
     if (p.owes && a.t !== 'give' && a.t !== 'select' && a.t !== 'flip') p.owes = null;
+    this.apply(p, a);
+    this.refillDeck();
+  }
+
+  private apply(p: PState, a: Action) {
     switch (a.t) {
       case 'ready':
         return this.ready(p);
@@ -189,6 +194,8 @@ export class Game {
         return this.swapDrawn(p, a.cardId);
       case 'discard':
         return this.discardDrawn(p);
+      case 'keep':
+        return this.keepDrawn(p);
       case 'peek':
         return this.peek(p, a.cardId);
       case 'pickTwo':
@@ -282,6 +289,19 @@ export class Game {
       cardIds: [],
       joker: null,
     });
+  }
+
+  /**
+   * With an empty hand there's nothing to swap with, so a drawn card may be kept instead. (It was drawn from the
+   * deck: taking the top discard needs a card to swap.)
+   */
+  private keepDrawn(p: PState) {
+    const step = this.requireStep(p, 'drawn');
+    if (this.cardCount(p)) throw new GameError('Swap it for one of your cards, or discard it.');
+    this.setStep({ kind: 'idle' });
+    this.placeInHand(p, step.card);
+    this.emit({ type: 'keep', playerId: p.id });
+    this.endTurn();
   }
 
   private peek(p: PState, cardId: string) {
@@ -676,10 +696,14 @@ export class Game {
     // Players who went out can't win.
     const alive = this.players.filter((p) => !p.out);
     const contenders = alive.length ? alive : this.players;
-    const best = Math.min(...contenders.map((p) => points[p.id]));
-    const winners = contenders.filter((p) => points[p.id] === best).map((p) => p.id);
+    // Lowest hand wins. A tie goes to whoever holds fewer cards, and if that's level too, against the Cambio caller.
+    const byPoints = lowest(contenders, (p) => points[p.id]);
+    const byCards = lowest(byPoints, (p) => this.cardCount(p));
+    const byCaller = lowest(byCards, (p) => (this.isLocked(p) ? 1 : 0));
+    const tiebreak = byCards.length < byPoints.length ? 'cards' : byCaller.length < byCards.length ? 'caller' : null;
+    const winners = byCaller.map((p) => p.id);
     const out = this.players.filter((p) => p.out).map((p) => p.id);
-    this.results = { scores, points, caller: this.caller, winners, out, reason };
+    this.results = { scores, points, caller: this.caller, winners, tiebreak, out, reason };
     this.emit({ type: 'roundEnd', results: this.results });
   }
 
@@ -770,14 +794,21 @@ export class Game {
   }
 
   private drawCard(): Card | null {
-    if (!this.deck.length && this.discard.length > 1) {
-      const top = this.discard.pop()!;
-      // Fresh ids so nobody can recognise a reshuffled card by its id.
-      this.deck = shuffle(this.discard.map((c) => ({ id: newCardId(), face: c.face })));
-      this.discard = [top];
-      this.emit({ type: 'reshuffle' });
-    }
+    this.refillDeck();
     return this.deck.pop() ?? null;
+  }
+
+  /**
+   * Once the deck runs out, the top discard stays where it is and the rest are shuffled into a new deck.
+   * Runs after every action and timer, so the table never shows an empty deck while there are discards to reuse.
+   */
+  private refillDeck() {
+    if (this.phase !== 'play' || this.deck.length || this.discard.length < 2) return;
+    const top = this.discard.pop()!;
+    // Fresh ids so nobody can recognise a reshuffled card by its id.
+    this.deck = shuffle(this.discard.map((c) => ({ id: newCardId(), face: c.face })));
+    this.discard = [top];
+    this.emit({ type: 'reshuffle' });
   }
 
   private placeInHand(p: PState, card: Card) {
@@ -826,6 +857,7 @@ export class Game {
       } catch (err) {
         if (!(err instanceof GameError)) throw err;
       }
+      this.refillDeck();
       this.opts.onChange();
     });
     this.cancels.add(cancel);
@@ -907,4 +939,10 @@ export class Game {
       giftMs: RULES.giftMs,
     };
   }
+}
+
+/** The players with the lowest `key`. */
+function lowest(ps: PState[], key: (p: PState) => number): PState[] {
+  const best = Math.min(...ps.map(key));
+  return ps.filter((p) => key(p) === best);
 }

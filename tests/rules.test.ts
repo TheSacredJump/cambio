@@ -331,3 +331,83 @@ describe('seven cards', () => {
     expect(game.allCards()).toHaveLength(total);
   });
 });
+
+describe('the deck', () => {
+  it('as soon as it runs out, keeps the top discard and shuffles the rest into a new deck', () => {
+    const { game, ids, card } = rigged([handA, handB], { rest: [f('9', 'S'), f('8', 'C'), f('5', 'D')] });
+    game.act(ids[0], { t: 'draw' });
+    game.act(ids[0], { t: 'swap', cardId: card(0, 1) }); // the 7 goes on the K♥
+    game.act(ids[1], { t: 'draw' });
+    game.act(ids[1], { t: 'swap', cardId: card(1, 0) }); // the 5 goes on top
+    game.deck = game.deck.slice(-1); // only the 5♦ left
+    const total = game.allCards().length;
+    const [under, top] = [game.discard.slice(0, -1), game.discard[game.discard.length - 1]];
+    game.drainEvents();
+    game.act(ids[0], { t: 'draw' }); // the last card
+    expect(game.drainEvents().map((e) => e.type)).toContain('reshuffle');
+    expect(game.discard).toEqual([top]);
+    expect(game.deck.map((c) => c.face)).toEqual(expect.arrayContaining(under.map((c) => c.face)));
+    expect(game.deck).toHaveLength(under.length);
+    expect(game.deck.some((c) => under.some((u) => u.id === c.id))).toBe(false);
+    expect(game.viewFor(ids[1]).deckCount).toBe(under.length);
+    expect(game.allCards()).toHaveLength(total);
+  });
+});
+
+describe('an empty hand', () => {
+  it('may keep a card drawn from the deck, or discard it', () => {
+    const { game, ids } = rigged([handA, handB], { rest: [f('K', 'D'), f('8', 'C'), f('4', 'S')] });
+    game.players[0].slots = [null, null, null, null];
+    expect(() => game.act(ids[0], { t: 'take' })).toThrow(/no cards/);
+    game.act(ids[0], { t: 'draw' });
+    game.act(ids[0], { t: 'keep' });
+    expect(game.players[0].slots.filter(Boolean).map((c) => c!.face)).toEqual([f('K', 'D')]);
+    expect(game.discard[game.discard.length - 1].face).toEqual(f('K', 'H'));
+    expect(game.current.id).toBe(ids[1]);
+    game.act(ids[1], { t: 'draw' });
+    expect(() => game.act(ids[1], { t: 'keep' })).toThrow(/Swap it/);
+  });
+});
+
+describe('ties', () => {
+  /** P0 calls Cambio; everyone else draws a red K and throws it away. */
+  function playOut(game: ReturnType<typeof rigged>['game'], ids: string[]) {
+    game.act(ids[0], { t: 'cambio' });
+    for (const id of ids.slice(1)) {
+      game.act(id, { t: 'draw' });
+      game.act(id, { t: 'discard' });
+    }
+    expect(game.phase).toBe('reveal');
+    return game.results!;
+  }
+  const three = [f('A'), f('A', 'H'), f('JK'), f('A', 'D')];
+  const two = [f('A'), f('JK'), f('JK', 'H'), f('A', 'H')];
+  const redKs = [f('K', 'D'), f('K', 'D'), f('K', 'D')];
+
+  it('go to whoever holds fewer cards', () => {
+    const { game, ids, card } = rigged([three, two, [f('K', 'S'), f('A', 'C'), f('JK'), f('A', 'S')]], { rest: redKs });
+    game.act(ids[0], { t: 'cambio' });
+    game.act(ids[1], { t: 'draw' });
+    game.act(ids[1], { t: 'discard' }); // a red K
+    game.act(ids[2], { t: 'flip', ownerId: ids[2], cardIds: [card(2, 0)] }); // C flips the black K: 2 points, 3 cards
+    game.act(ids[2], { t: 'draw' });
+    game.act(ids[2], { t: 'discard' });
+    expect(game.results).toMatchObject({ winners: [ids[2]], tiebreak: 'cards' });
+  });
+
+  it('are shared when points and cards are both level', () => {
+    const { game, ids } = rigged([three, two, [f('JK'), f('A', 'C'), f('A', 'S'), f('JK', 'H')]], { rest: redKs });
+    expect(playOut(game, ids)).toMatchObject({ winners: [ids[1], ids[2]], tiebreak: null });
+  });
+
+  it('go against the Cambio caller when points and cards are level', () => {
+    const { game, ids } = rigged([two, [f('JK'), f('A', 'C'), f('A', 'S'), f('JK', 'H')]], { rest: redKs });
+    expect(playOut(game, ids)).toMatchObject({ winners: [ids[1]], tiebreak: 'caller' });
+  });
+
+  it('still go to the caller if they hold fewer cards', () => {
+    const { game, ids } = rigged([two, [f('JK'), f('A', 'C'), f('A', 'S'), f('JK', 'H')]], { rest: redKs });
+    game.players[0].slots[1] = null; // drop a Joker: still 2 points, now 3 cards
+    expect(playOut(game, ids)).toMatchObject({ winners: [ids[0]], tiebreak: 'cards' });
+  });
+});

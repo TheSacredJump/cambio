@@ -17,8 +17,9 @@ function CountUp({ to, delay }: { to: number; delay: number }) {
 export function Results({ room, game, you, name }: { room: RoomView; game: GameView; you: string; name: (id: string) => string }) {
   const r = game.results!;
   const host = room.hostId === you;
-  // Players still standing first, then anyone who went out.
-  const rows = [...game.players].sort((a, b) => Number(a.out) - Number(b.out) || r.points[a.id] - r.points[b.id]);
+  // Players still standing first, then anyone who went out. Within a tie on points, the winner leads.
+  const won = (id: string) => Number(r.winners.includes(id));
+  const rows = [...game.players].sort((a, b) => Number(a.out) - Number(b.out) || r.points[a.id] - r.points[b.id] || won(b.id) - won(a.id));
   const lastRow = room.history[room.history.length - 1] ?? {};
   const champion = room.matchOver
     ? Object.entries(room.totals).sort((a, b) => a[1] - b[1])[0]?.[0]
@@ -38,6 +39,8 @@ export function Results({ room, game, you, name }: { room: RoomView; game: GameV
         <h2 className="sheet-title">{headline}</h2>
         {r.reason === 'deck' && <p className="results-note">The deck ran out</p>}
         {r.reason === 'out' && <p className="results-note">Last one standing</p>}
+        {r.tiebreak === 'cards' && <p className="results-note">Tied on points, so fewer cards wins</p>}
+        {r.tiebreak === 'caller' && <p className="results-note">A tie goes against the Cambio caller</p>}
 
         <div className="results-legend" aria-hidden="true">
           <span />

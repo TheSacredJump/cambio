@@ -34,7 +34,9 @@ Lowest hand wins. A = 1, number cards at face value, J = 11, Q = 12, black K = 1
 
 **Setup.** Four cards face down in a 2×2 grid. Before play, each player looks at their nearest two once.
 
-**A turn.** Draw from the deck, or take the top discard and swap it in. Swap the drawn card for one of yours (the old one goes to the discard), or discard it. Only a card drawn from the deck and discarded straight away uses its power. Powers are optional, except the Joker.
+**A turn.** Draw from the deck, or take the top discard and swap it in. Swap the drawn card for one of yours (the old one goes to the discard), or discard it. If your hand is empty, you can keep the drawn card instead. Only a card drawn from the deck and discarded straight away uses its power. Powers are optional, except the Joker.
+
+**The deck.** As soon as the deck runs out, the top discard stays where it is and the rest of the discard pile is shuffled into a new deck.
 
 **The rhymes**
 
@@ -56,7 +58,7 @@ Lowest hand wins. A = 1, number cards at face value, J = 11, Q = 12, black K = 1
 
 **Cambio.** When your hand is 3 or less, a Cambio button appears at the start of your turn; call it instead of drawing. Everyone else gets one more turn, then all cards are turned over. The caller's hand is locked against swaps, flips and the Joker.
 
-**Scoring.** The round's lowest hand scores 0; everyone else adds their hand. The match ends when someone reaches 100, and the lowest total wins.
+**Scoring.** The round's lowest hand scores 0; everyone else adds their hand. A tie on points goes to whoever holds fewer cards. If points and cards are both level, it's a true tie and everyone in it scores 0, unless one of them called Cambio: then the caller loses the tie. The match ends when someone reaches 100, and the lowest total wins.
 
 ### Choices made where the rules were silent
 
@@ -64,7 +66,6 @@ These follow the most common published Cambio rules:
 
 - One card is turned up to start the discard pile; nobody can flip onto it.
 - Taking the top discard is allowed, but it must be swapped in and its power doesn't trigger.
-- If the deck runs out, the discards (all but the top card) are reshuffled into a new deck.
 - Skip immunity lasts until the end of the skipped player's next turn.
 - The Joker pool goes back one card per player, into the slot each card came from.
 
